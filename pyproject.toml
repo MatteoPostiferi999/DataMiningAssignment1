@@ -1,0 +1,17 @@
+[project]
+name = "data-mining-assignment1"
+version = "0.1.0"
+description = "Data Mining Techniques - Assignment 1 (VU Amsterdam)"
+requires-python = ">=3.10"
+
+dependencies = [
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "scipy",
+    "jupyter",
+    "torch",
+    "tree>=0.2.4",
+]
