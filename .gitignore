@@ -1,0 +1,81 @@
+# ------------------------------
+# OS / filesystem
+# ------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+Desktop.ini
+
+# ------------------------------
+# Editor / IDE
+# ------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ------------------------------
+# Python
+# ------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ------------------------------
+# Logs and temp files
+# ------------------------------
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# ------------------------------
+# Local environment files
+# ------------------------------
+.env
+.env.*
+
+# ------------------------------
+# Data science artifacts (optional outputs)
+# ------------------------------
+outputs/
+results/
+artifacts/
+models/
+
+# ------------------------------
+# Documents not to push
+# ------------------------------
+*.pdf
