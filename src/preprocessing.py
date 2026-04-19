@@ -3,9 +3,13 @@ import numpy as np
 
 RAW_PATH = "data/raw/dataset_mood_smartphone.csv"
 CLEANED_PATH = "data/processed/cleaned.csv"
+CLEANED_LONG_MOOD_PATH = "data/processed/cleaned_long_mood.csv"
 
-# Variables aggregated as mean (self-reports)
-MEAN_VARS = ["mood", "circumplex.arousal", "circumplex.valence", "activity"]
+# Self-report variables averaged per user-day (mood is handled separately
+# below so that within-day statistics — std, min, max, count — are kept
+# alongside the mean; collapsing to the mean alone discards signal such as
+# within-day volatility and time-of-day effects.)
+MEAN_VARS = ["circumplex.arousal", "circumplex.valence", "activity"]
 # Variables aggregated as sum (sensor counts / durations)
 SUM_VARS = [
     "screen", "call", "sms",
@@ -23,7 +27,13 @@ ZERO_IMPUTE_VARS = [
     "appCat.utilities", "appCat.weather",
 ]
 # Variables compared for LOCF vs interpolation (true unknowns)
-INTERP_VARS = ["mood", "circumplex.arousal", "circumplex.valence", "activity"]
+# `mood` here is the daily mean; the within-day summary columns
+# (mood_std/min/max) are interpolated alongside so that the CNN input is
+# free of NaN on non-gap rows.
+INTERP_VARS = [
+    "mood", "mood_std", "mood_min", "mood_max",
+    "circumplex.arousal", "circumplex.valence", "activity",
+]
 
 # Hard domain bounds per variable (inclusive [lo, hi])
 DOMAIN_BOUNDS = {
@@ -123,8 +133,11 @@ def pivot_to_wide(df: pd.DataFrame) -> pd.DataFrame:
     """
     Convert long-format data to wide format: one row per (id, date).
     Aggregation strategy:
-      - mean: mood, circumplex.arousal, circumplex.valence, activity
-      - sum:  screen, call, sms, appCat.*
+      - mood  : mean, std, min, max, count per user-day — the within-day
+                summary captures volatility that a single mean hides, and
+                `mood_count` is a compliance proxy
+      - mean  : circumplex.arousal, circumplex.valence, activity
+      - sum   : screen, call, sms, appCat.*
     """
     df = df.copy()
     df["date"] = pd.to_datetime(df["time"]).dt.normalize()  # date at midnight
@@ -143,9 +156,51 @@ def pivot_to_wide(df: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    wide = sum_wide.merge(mean_wide, on=["id", "date"], how="outer")
+    mood_stats = (
+        df[df["variable"] == "mood"]
+        .groupby(["id", "date"])["value"]
+        .agg(mood="mean", mood_std="std", mood_min="min", mood_max="max", mood_count="count")
+        .reset_index()
+    )
+    # Days with a single mood reading produce NaN std — define it as 0
+    # (no within-day variance observable, not "unknown")
+    mood_stats["mood_std"] = mood_stats["mood_std"].fillna(0)
+
+    wide = sum_wide.merge(mean_wide,  on=["id", "date"], how="outer")
+    wide = wide.merge(mood_stats,     on=["id", "date"], how="outer")
     wide = wide.sort_values(["id", "date"]).reset_index(drop=True)
     return wide
+
+
+def finalize_mood_count(df_wide: pd.DataFrame) -> pd.DataFrame:
+    """
+    After interpolation, rows where mood was imputed (short gaps, leading
+    bfill) still have NaN mood_count. Fill those with 0: the interpolated
+    row had no real mood readings. Non-NaN values encode real compliance
+    (3 vs 5 self-reports is a signal worth keeping).
+    """
+    df_wide = df_wide.copy()
+    if "mood_count" in df_wide.columns:
+        df_wide["mood_count"] = df_wide["mood_count"].fillna(0).astype(int)
+    return df_wide
+
+
+def save_cleaned_long_mood(df_clipped: pd.DataFrame, path: str) -> pd.DataFrame:
+    """
+    Persist the domain-clipped mood readings in long format with their
+    original timestamps, so downstream feature engineering (1C) can derive
+    time-of-day features (e.g. morning-mood vs evening-mood) without
+    re-applying the clipping step.
+    """
+    mood_long = (
+        df_clipped[df_clipped["variable"] == "mood"][["id", "time", "value"]]
+        .copy()
+        .rename(columns={"value": "mood"})
+    )
+    mood_long["time"] = pd.to_datetime(mood_long["time"])
+    mood_long = mood_long.sort_values(["id", "time"]).reset_index(drop=True)
+    mood_long.to_csv(path, index=False)
+    return mood_long
 
 
 # ---------------------------------------------------------------------------
