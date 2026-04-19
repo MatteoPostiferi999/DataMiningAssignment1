@@ -82,3 +82,5 @@ models/
 data/processed/cleaned_long_mood.csv
 data/processed/cleaned.csv
 
+data/processed/features_sequential_meta.csv
+data/processed/features_tabular.csv
