@@ -14,5 +14,6 @@ dependencies = [
     "statsmodels",
     "jupyter",
     "torch",
+    "lightgbm",
     "tree>=0.2.4",
 ]
