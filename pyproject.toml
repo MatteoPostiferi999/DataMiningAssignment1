@@ -11,6 +11,7 @@ dependencies = [
     "seaborn",
     "scikit-learn",
     "scipy",
+    "statsmodels",
     "jupyter",
     "torch",
     "tree>=0.2.4",
