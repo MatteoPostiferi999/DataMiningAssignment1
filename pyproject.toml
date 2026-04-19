@@ -11,7 +11,9 @@ dependencies = [
     "seaborn",
     "scikit-learn",
     "scipy",
+    "statsmodels",
     "jupyter",
     "torch",
+    "lightgbm",
     "tree>=0.2.4",
 ]
